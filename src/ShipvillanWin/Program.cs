@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Threading;
 using System.Windows.Forms;
@@ -24,6 +25,17 @@ internal static class Program
 
         try
         {
+            // In Debug builds, enable debug output
+#if DEBUG
+            // Option A: Console output (only works if you change OutputType to Exe temporarily)
+            Trace.Listeners.Add(new ConsoleTraceListener());
+
+            // Option B: File output (uncomment to enable persistent logging)
+            // FileLogger.Enable();
+
+            Debug.WriteLine("Debug output enabled - all Debug.WriteLine calls will be captured");
+#endif
+
             // Enable high DPI support for modern displays
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             ApplicationConfiguration.Initialize();

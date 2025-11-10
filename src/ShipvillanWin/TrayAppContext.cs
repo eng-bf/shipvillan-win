@@ -29,6 +29,7 @@ internal sealed class TrayAppContext : ApplicationContext
     private ToolStripMenuItem? _statusItem;
     private ToolStripMenuItem? _modeMenuOrderAssignment;
     private ToolStripMenuItem? _modeMenuInterception;
+    private ToolStripMenuItem? _modeMenuPassthrough;
     private ToolStripMenuItem? _comPortMenu;
 
     public TrayAppContext()
@@ -119,8 +120,13 @@ internal sealed class TrayAppContext : ApplicationContext
         _modeMenuInterception.Tag = OperationMode.Interception;
         _modeMenuInterception.Checked = _config.Mode == OperationMode.Interception;
 
+        _modeMenuPassthrough = new ToolStripMenuItem("Passthrough (Disabled)", null, OnModeSelected);
+        _modeMenuPassthrough.Tag = OperationMode.Passthrough;
+        _modeMenuPassthrough.Checked = _config.Mode == OperationMode.Passthrough;
+
         modeMenu.DropDownItems.Add(_modeMenuOrderAssignment);
         modeMenu.DropDownItems.Add(_modeMenuInterception);
+        modeMenu.DropDownItems.Add(_modeMenuPassthrough);
 
         // COM port submenu
         _comPortMenu = new ToolStripMenuItem("COM Port");
@@ -287,6 +293,8 @@ internal sealed class TrayAppContext : ApplicationContext
             _modeMenuOrderAssignment.Checked = newMode == OperationMode.OrderAssignment;
         if (_modeMenuInterception != null)
             _modeMenuInterception.Checked = newMode == OperationMode.Interception;
+        if (_modeMenuPassthrough != null)
+            _modeMenuPassthrough.Checked = newMode == OperationMode.Passthrough;
 
         MessageBox.Show(
             $"Mode changed to: {newMode}\n\nThe application will restart to apply changes.",
@@ -350,6 +358,23 @@ internal sealed class TrayAppContext : ApplicationContext
         else if (_config.Mode == OperationMode.OrderAssignment && _orderAssignmentProcessor != null)
         {
             await _orderAssignmentProcessor.ProcessBarcodeAsync(barcode);
+        }
+        else if (_config.Mode == OperationMode.Passthrough)
+        {
+            // Passthrough mode: Forward immediately without any processing
+            Debug.WriteLine($"TrayAppContext: Passthrough mode - forwarding barcode '{barcode}' directly");
+            try
+            {
+                await KeyboardSimulator.SendKeysAsync(
+                    barcode,
+                    _config.KeyboardDelayMs,
+                    _config.AppendEnterKey
+                );
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"TrayAppContext: Error forwarding barcode in Passthrough mode: {ex.Message}");
+            }
         }
     }
 
