@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Linq;
 using System.Runtime.Versioning;
 using System.Windows.Forms;
 
@@ -8,7 +9,7 @@ namespace ShipvillanWin;
 
 /// <summary>
 /// Application context for the system tray application.
-/// Manages the tray icon, context menu, and application lifecycle.
+/// Manages the tray icon, context menu, barcode processing, and application lifecycle.
 /// </summary>
 [SupportedOSPlatform("windows")]
 internal sealed class TrayAppContext : ApplicationContext
@@ -17,11 +18,38 @@ internal sealed class TrayAppContext : ApplicationContext
 
     private readonly NotifyIcon _trayIcon;
     private readonly ContextMenuStrip _contextMenu;
+    private readonly AppConfiguration _config;
+    private readonly ComPortManager _comPortManager;
+    private readonly BarcodeProcessor? _barcodeProcessor;
+
+    // Menu items that need to be updated
+    private ToolStripMenuItem? _statusItem;
+    private ToolStripMenuItem? _modeMenuOrderAssignment;
+    private ToolStripMenuItem? _modeMenuInterception;
+    private ToolStripMenuItem? _comPortMenu;
 
     public TrayAppContext()
     {
+        // Load configuration
+        _config = AppConfiguration.Load();
+
         // Ensure we auto-start at login (HKCU)
         InitializeAutoStart();
+
+        // Initialize COM port manager
+        _comPortManager = new ComPortManager();
+        _comPortManager.BarcodeReceived += OnBarcodeReceived;
+        _comPortManager.ConnectionStatusChanged += OnConnectionStatusChanged;
+        _comPortManager.ErrorOccurred += OnComPortError;
+
+        // Initialize barcode processor for Interception mode
+        if (_config.Mode == OperationMode.Interception)
+        {
+            var interceptionService = new InterceptionService();
+            _barcodeProcessor = new BarcodeProcessor(_config, interceptionService);
+            _barcodeProcessor.ProcessingStatusChanged += OnProcessingStatusChanged;
+            _barcodeProcessor.BarcodeRejected += OnBarcodeRejected;
+        }
 
         // Build context menu
         _contextMenu = CreateContextMenu();
@@ -29,6 +57,12 @@ internal sealed class TrayAppContext : ApplicationContext
         // Initialize system tray icon
         _trayIcon = CreateTrayIcon(_contextMenu);
         _trayIcon.MouseUp += OnTrayIconMouseUp;
+
+        // Auto-connect to configured COM port if set
+        if (!string.IsNullOrEmpty(_config.ComPort))
+        {
+            TryConnectToComPort(_config.ComPort);
+        }
     }
 
     /// <summary>
@@ -56,13 +90,40 @@ internal sealed class TrayAppContext : ApplicationContext
     /// </summary>
     private ContextMenuStrip CreateContextMenu()
     {
-        var helloItem = new ToolStripMenuItem("Hello World", null, OnHelloClick);
-        var exitItem = new ToolStripMenuItem("Exit", null, OnExitClick);
-
         var menu = new ContextMenuStrip();
-        menu.Items.Add(helloItem);
+
+        // Mode selection submenu
+        var modeMenu = new ToolStripMenuItem("Mode");
+        _modeMenuOrderAssignment = new ToolStripMenuItem("Order Assignment (MX)", null, OnModeSelected);
+        _modeMenuOrderAssignment.Tag = OperationMode.OrderAssignment;
+        _modeMenuOrderAssignment.Checked = _config.Mode == OperationMode.OrderAssignment;
+
+        _modeMenuInterception = new ToolStripMenuItem("Interception (US)", null, OnModeSelected);
+        _modeMenuInterception.Tag = OperationMode.Interception;
+        _modeMenuInterception.Checked = _config.Mode == OperationMode.Interception;
+
+        modeMenu.DropDownItems.Add(_modeMenuOrderAssignment);
+        modeMenu.DropDownItems.Add(_modeMenuInterception);
+
+        // COM port submenu
+        _comPortMenu = new ToolStripMenuItem("COM Port");
+        _comPortMenu.DropDownOpening += OnComPortMenuOpening;
+        RefreshComPortMenu();
+
+        // Status item
+        _statusItem = new ToolStripMenuItem(GetStatusText())
+        {
+            Enabled = false // Non-clickable, just for display
+        };
+
+        // Build menu structure
+        menu.Items.Add(modeMenu);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(exitItem);
+        menu.Items.Add(_comPortMenu);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(_statusItem);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(new ToolStripMenuItem("Exit", null, OnExitClick));
 
         return menu;
     }
@@ -95,16 +156,226 @@ internal sealed class TrayAppContext : ApplicationContext
     }
 
     /// <summary>
-    /// Handles the "Hello World" menu item click.
+    /// Gets the status text for display in the menu.
     /// </summary>
-    private void OnHelloClick(object? sender, EventArgs e)
+    private string GetStatusText()
     {
+        if (!_comPortManager.IsConnected)
+        {
+            return "Status: Disconnected";
+        }
+
+        var status = $"Status: Connected to {_comPortManager.CurrentPort} ✓";
+
+        if (_barcodeProcessor?.IsProcessing == true)
+        {
+            status += " (Processing...)";
+        }
+
+        return status;
+    }
+
+    /// <summary>
+    /// Updates the status menu item.
+    /// </summary>
+    private void UpdateStatus()
+    {
+        if (_statusItem != null)
+        {
+            _statusItem.Text = GetStatusText();
+        }
+    }
+
+    /// <summary>
+    /// Refreshes the COM port menu with available ports.
+    /// </summary>
+    private void RefreshComPortMenu()
+    {
+        if (_comPortMenu == null)
+            return;
+
+        _comPortMenu.DropDownItems.Clear();
+
+        var ports = ComPortManager.GetAvailablePorts();
+
+        if (ports.Count == 0)
+        {
+            _comPortMenu.DropDownItems.Add(new ToolStripMenuItem("No ports available") { Enabled = false });
+        }
+        else
+        {
+            foreach (var port in ports)
+            {
+                var item = new ToolStripMenuItem(port.DisplayName, null, OnComPortSelected);
+                item.Tag = port;
+                item.Checked = port.PortName == _config.ComPort;
+                _comPortMenu.DropDownItems.Add(item);
+            }
+        }
+
+        _comPortMenu.DropDownItems.Add(new ToolStripSeparator());
+        _comPortMenu.DropDownItems.Add(new ToolStripMenuItem("Refresh Ports", null, OnRefreshPorts));
+    }
+
+    /// <summary>
+    /// Tries to connect to a COM port, showing errors if connection fails.
+    /// </summary>
+    private void TryConnectToComPort(string portName)
+    {
+        try
+        {
+            _comPortManager.Connect(portName, _config.BaudRate, _config.DataBits);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to connect to {portName}: {ex.Message}");
+            MessageBox.Show(
+                $"Failed to connect to {portName}:\n\n{ex.Message}",
+                AppTitle,
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
+            );
+        }
+    }
+
+    #region Event Handlers
+
+    /// <summary>
+    /// Handles mode selection changes.
+    /// </summary>
+    private void OnModeSelected(object? sender, EventArgs e)
+    {
+        if (sender is not ToolStripMenuItem item || item.Tag is not OperationMode newMode)
+            return;
+
+        if (_config.Mode == newMode)
+            return; // Already in this mode
+
+        _config.Mode = newMode;
+        _config.Save();
+
+        // Update checkmarks
+        if (_modeMenuOrderAssignment != null)
+            _modeMenuOrderAssignment.Checked = newMode == OperationMode.OrderAssignment;
+        if (_modeMenuInterception != null)
+            _modeMenuInterception.Checked = newMode == OperationMode.Interception;
+
         MessageBox.Show(
-            "hello world!",
+            $"Mode changed to: {newMode}\n\nThe application will restart to apply changes.",
             AppTitle,
             MessageBoxButtons.OK,
             MessageBoxIcon.Information
         );
+
+        // Restart application
+        Application.Restart();
+        Environment.Exit(0);
+    }
+
+    /// <summary>
+    /// Handles COM port menu opening (refresh ports).
+    /// </summary>
+    private void OnComPortMenuOpening(object? sender, EventArgs e)
+    {
+        RefreshComPortMenu();
+    }
+
+    /// <summary>
+    /// Handles COM port selection.
+    /// </summary>
+    private void OnComPortSelected(object? sender, EventArgs e)
+    {
+        if (sender is not ToolStripMenuItem item || item.Tag is not ComPortInfo portInfo)
+            return;
+
+        // Disconnect from current port
+        _comPortManager.Disconnect();
+
+        // Connect to new port
+        _config.ComPort = portInfo.PortName;
+        _config.Save();
+
+        TryConnectToComPort(portInfo.PortName);
+        RefreshComPortMenu();
+    }
+
+    /// <summary>
+    /// Handles refresh ports menu click.
+    /// </summary>
+    private void OnRefreshPorts(object? sender, EventArgs e)
+    {
+        RefreshComPortMenu();
+    }
+
+    /// <summary>
+    /// Handles barcode received from COM port.
+    /// </summary>
+    private async void OnBarcodeReceived(object? sender, string barcode)
+    {
+        Debug.WriteLine($"TrayAppContext: Barcode received: {barcode}");
+
+        // Only process in Interception mode
+        if (_config.Mode == OperationMode.Interception && _barcodeProcessor != null)
+        {
+            await _barcodeProcessor.ProcessBarcodeAsync(barcode);
+        }
+        else if (_config.Mode == OperationMode.OrderAssignment)
+        {
+            // TODO: Implement Order Assignment mode logic
+            Debug.WriteLine("Order Assignment mode: Not yet implemented");
+        }
+    }
+
+    /// <summary>
+    /// Handles COM port connection status changes.
+    /// </summary>
+    private void OnConnectionStatusChanged(object? sender, bool isConnected)
+    {
+        Debug.WriteLine($"COM port connection status: {(isConnected ? "Connected" : "Disconnected")}");
+
+        // Update status on UI thread
+        if (_contextMenu.InvokeRequired)
+        {
+            _contextMenu.Invoke(UpdateStatus);
+        }
+        else
+        {
+            UpdateStatus();
+        }
+    }
+
+    /// <summary>
+    /// Handles COM port errors.
+    /// </summary>
+    private void OnComPortError(object? sender, Exception ex)
+    {
+        Debug.WriteLine($"COM port error: {ex.Message}");
+        // Errors are logged but don't show user dialogs (would be disruptive)
+    }
+
+    /// <summary>
+    /// Handles barcode processing status changes.
+    /// </summary>
+    private void OnProcessingStatusChanged(object? sender, bool isProcessing)
+    {
+        // Update status on UI thread
+        if (_contextMenu.InvokeRequired)
+        {
+            _contextMenu.Invoke(UpdateStatus);
+        }
+        else
+        {
+            UpdateStatus();
+        }
+    }
+
+    /// <summary>
+    /// Handles barcode rejection (scanned during processing).
+    /// </summary>
+    private void OnBarcodeRejected(object? sender, EventArgs e)
+    {
+        Debug.WriteLine("Barcode scan rejected (processing in progress)");
+        // Could show a visual/audio indication here
     }
 
     /// <summary>
@@ -116,12 +387,18 @@ internal sealed class TrayAppContext : ApplicationContext
         ExitThread();
     }
 
+    #endregion
+
     /// <summary>
     /// Performs cleanup when the application exits.
     /// Ensures the tray icon is properly disposed and hidden.
     /// </summary>
     protected override void ExitThreadCore()
     {
+        // Disconnect from COM port
+        _comPortManager?.Disconnect();
+
+        // Hide and dispose tray icon
         if (_trayIcon != null)
         {
             _trayIcon.Visible = false;
@@ -130,6 +407,7 @@ internal sealed class TrayAppContext : ApplicationContext
         }
 
         _contextMenu?.Dispose();
+        _comPortManager?.Dispose();
 
         base.ExitThreadCore();
     }
@@ -141,6 +419,7 @@ internal sealed class TrayAppContext : ApplicationContext
     {
         if (disposing)
         {
+            _comPortManager?.Dispose();
             _trayIcon?.Dispose();
             _contextMenu?.Dispose();
         }
