@@ -22,6 +22,7 @@ internal sealed class TrayAppContext : ApplicationContext
     private readonly AppConfiguration _config;
     private readonly ComPortManager _comPortManager;
     private readonly BarcodeProcessor? _barcodeProcessor;
+    private readonly OrderAssignmentProcessor? _orderAssignmentProcessor;
     private readonly UpdateService _updateService;
 
     // Menu items that need to be updated
@@ -44,13 +45,19 @@ internal sealed class TrayAppContext : ApplicationContext
         _comPortManager.ConnectionStatusChanged += OnConnectionStatusChanged;
         _comPortManager.ErrorOccurred += OnComPortError;
 
-        // Initialize barcode processor for Interception mode
+        // Initialize barcode processor based on operation mode
         if (_config.Mode == OperationMode.Interception)
         {
             var interceptionService = new InterceptionService();
             _barcodeProcessor = new BarcodeProcessor(_config, interceptionService);
             _barcodeProcessor.ProcessingStatusChanged += OnProcessingStatusChanged;
             _barcodeProcessor.BarcodeRejected += OnBarcodeRejected;
+        }
+        else if (_config.Mode == OperationMode.OrderAssignment)
+        {
+            var orderAssignmentService = new OrderAssignmentService();
+            _orderAssignmentProcessor = new OrderAssignmentProcessor(_config, orderAssignmentService);
+            _orderAssignmentProcessor.AssignmentCompleted += OnAssignmentCompleted;
         }
 
         // Initialize update service
@@ -335,15 +342,14 @@ internal sealed class TrayAppContext : ApplicationContext
     {
         Debug.WriteLine($"TrayAppContext: Barcode received: {barcode}");
 
-        // Only process in Interception mode
+        // Process based on operation mode
         if (_config.Mode == OperationMode.Interception && _barcodeProcessor != null)
         {
             await _barcodeProcessor.ProcessBarcodeAsync(barcode);
         }
-        else if (_config.Mode == OperationMode.OrderAssignment)
+        else if (_config.Mode == OperationMode.OrderAssignment && _orderAssignmentProcessor != null)
         {
-            // TODO: Implement Order Assignment mode logic
-            Debug.WriteLine("Order Assignment mode: Not yet implemented");
+            await _orderAssignmentProcessor.ProcessBarcodeAsync(barcode);
         }
     }
 
@@ -397,6 +403,23 @@ internal sealed class TrayAppContext : ApplicationContext
     {
         Debug.WriteLine("Barcode scan rejected (processing in progress)");
         // Could show a visual/audio indication here
+    }
+
+    /// <summary>
+    /// Handles order assignment completion (success or failure).
+    /// </summary>
+    private void OnAssignmentCompleted(object? sender, OrderAssignmentResult result)
+    {
+        if (result.Success)
+        {
+            Debug.WriteLine($"Order assignment succeeded: {result.OrderBarcode} → {result.ToteBarcode}");
+        }
+        else
+        {
+            Debug.WriteLine($"Order assignment failed: {result.OrderBarcode} → {result.ToteBarcode}. Error: {result.ErrorMessage}");
+            // TODO: Implement remote logging for failures
+            // This will eventually send failure logs to a remote system for monitoring
+        }
     }
 
     /// <summary>
