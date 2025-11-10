@@ -148,10 +148,12 @@ This application uses **automatic updates** via GitHub Releases. Here's the comp
 
 ### Prerequisites for Releases
 
-1. Install Clowd.Squirrel CLI tools:
+1. Download Squirrel.Windows tools:
    ```bash
-   dotnet tool install -g Clowd.Squirrel
+   # Run this once to download squirrel.exe
+   .\download-squirrel.ps1
    ```
+   This downloads `squirrel.exe` to the repository root.
 
 2. Ensure you have push access to the repository
 
@@ -244,7 +246,7 @@ cd C:\Users\gwin\src\shipvillan-win
 dotnet publish src\ShipvillanWin\ShipvillanWin.csproj -c Release -r win-x86 --self-contained false -o .\publish
 
 # Create Squirrel release package
-squirrel pack --packId ShipvillanWin --packVersion 1.0.1 --packDirectory .\publish --releaseDir .\releases
+.\squirrel.exe pack --packId ShipvillanWin --packVersion 1.0.1 --packDirectory .\publish --releaseDir .\releases
 ```
 
 This creates several files in the `releases` folder:
@@ -346,7 +348,7 @@ To test the update mechanism without deploying to production:
 
 ```bash
 # Create a test release with a higher version
-squirrel pack --packId ShipvillanWin --packVersion 1.0.2-beta --packDirectory .\publish --releaseDir .\test-releases
+.\squirrel.exe pack --packId ShipvillanWin --packVersion 1.0.2-beta --packDirectory .\publish --releaseDir .\test-releases
 
 # Start a local HTTP server
 cd test-releases
@@ -385,7 +387,7 @@ dotnet run
 dotnet publish src\ShipvillanWin\ShipvillanWin.csproj -c Release -r win-x86 --self-contained false -o .\publish
 
 # Create update package
-squirrel pack --packId ShipvillanWin --packVersion X.Y.Z --packDirectory .\publish --releaseDir .\releases
+.\squirrel.exe pack --packId ShipvillanWin --packVersion X.Y.Z --packDirectory .\publish --releaseDir .\releases
 ```
 
 ### Troubleshooting
@@ -409,3 +411,4 @@ squirrel pack --packId ShipvillanWin --packVersion X.Y.Z --packDirectory .\publi
 
 - **`RELEASE-PROCESS.md`** - Detailed release procedures and troubleshooting
 - **`ICON-AND-INSTALL.md`** - Custom icon setup and PowerShell installation guide
+- **`SQUIRREL-SETUP.md`** - Squirrel installation and troubleshooting guide

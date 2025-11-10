@@ -4,10 +4,12 @@ This document describes how to create and publish new releases for ShipvillanWin
 
 ## Prerequisites
 
-1. Install Clowd.Squirrel CLI tools:
+1. Download Squirrel.Windows tools:
    ```bash
-   dotnet tool install -g Clowd.Squirrel
+   # Run this once from repository root
+   .\download-squirrel.ps1
    ```
+   This downloads `squirrel.exe` to the repository root.
 
 2. Ensure you have write access to the GitHub repository: `https://github.com/eng-bf/shipvillan-win`
 
@@ -37,7 +39,7 @@ dotnet publish src\ShipvillanWin\ShipvillanWin.csproj -c Release -r win-x86 --se
 ### Step 2: Create Squirrel Release Package
 
 ```bash
-squirrel pack --packId ShipvillanWin --packVersion 1.0.0 --packDirectory .\publish --releaseDir .\releases
+.\squirrel.exe pack --packId ShipvillanWin --packVersion 1.0.0 --packDirectory .\publish --releaseDir .\releases
 ```
 
 This creates:
@@ -97,7 +99,7 @@ Users can rollback to the previous version:
 
 ```bash
 # Create a test release
-squirrel pack --packId ShipvillanWin --packVersion 1.0.1 --packDirectory .\publish --releaseDir .\test-releases
+.\squirrel.exe pack --packId ShipvillanWin --packVersion 1.0.1 --packDirectory .\publish --releaseDir .\test-releases
 
 # Start a local web server
 cd test-releases
