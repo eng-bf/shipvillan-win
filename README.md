@@ -1,12 +1,31 @@
 # ShipvillanWin (x86, .NET 8)
 
-A minimal WinForms tray application that:
-- Runs in the background with a system tray icon
-- Provides a **Hello World** menu item that shows a popup
-- Registers itself to **start at user login** (HKCU\...\Run)
+A Windows system tray application for warehouse barcode processing with multiple operation modes:
+- **Order Assignment (MX)** - Always forwards barcodes, performs async order-to-tote pairing
+- **Interception (US)** - Processes CT- prefixed barcodes with async transformations
+- **Passthrough** - Disables all processing, forwards barcodes immediately
+- Auto-updates via GitHub Releases
+- Runs in the background with system tray icon
+- Starts automatically at user login
 - Targets **x86** (32-bit) Windows
 
-## Prerequisites
+## Quick Install (End Users)
+
+Install with one PowerShell command:
+
+```powershell
+irm https://raw.githubusercontent.com/eng-bf/shipvillan-win/main/install.ps1 | iex
+```
+
+This will:
+- ✅ Download and install the latest version
+- ✅ Set up auto-start at login
+- ✅ Enable automatic updates
+- ✅ Start the application in the system tray
+
+Right-click the tray icon to configure operation mode and COM port settings.
+
+## Prerequisites (Developers)
 
 - Windows 10/11 (minimum version: 1809 / build 17763)
 - [.NET SDK 8.x](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
@@ -388,4 +407,5 @@ squirrel pack --packId ShipvillanWin --packVersion X.Y.Z --packDirectory .\publi
 
 ### Additional Documentation
 
-See `RELEASE-PROCESS.md` for detailed release procedures and troubleshooting.
+- **`RELEASE-PROCESS.md`** - Detailed release procedures and troubleshooting
+- **`ICON-AND-INSTALL.md`** - Custom icon setup and PowerShell installation guide

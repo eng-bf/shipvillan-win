@@ -170,7 +170,7 @@ internal sealed class TrayAppContext : ApplicationContext
         return new NotifyIcon
         {
             Text = AppTitle,
-            Icon = SystemIcons.Application,
+            Icon = IconHelper.GetTrayIcon(),
             ContextMenuStrip = contextMenu,
             Visible = true
         };
