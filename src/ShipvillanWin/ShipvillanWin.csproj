@@ -13,6 +13,11 @@
     <AssemblyName>ShipvillanWin</AssemblyName>
     <RootNamespace>ShipvillanWin</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!-- Version information for Squirrel updates -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0</AssemblyVersion>
+    <FileVersion>1.0.0</FileVersion>
   </PropertyGroup>
 
   <!-- Debug builds use x64 (matches your installed runtime) -->
@@ -26,6 +31,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Clowd.Squirrel" Version="2.11.1" />
     <PackageReference Include="System.IO.Ports" Version="8.0.0" />
     <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>

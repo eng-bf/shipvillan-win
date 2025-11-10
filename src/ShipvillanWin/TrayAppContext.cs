@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.Versioning;
 using System.Windows.Forms;
 
@@ -21,6 +22,7 @@ internal sealed class TrayAppContext : ApplicationContext
     private readonly AppConfiguration _config;
     private readonly ComPortManager _comPortManager;
     private readonly BarcodeProcessor? _barcodeProcessor;
+    private readonly UpdateService _updateService;
 
     // Menu items that need to be updated
     private ToolStripMenuItem? _statusItem;
@@ -51,6 +53,11 @@ internal sealed class TrayAppContext : ApplicationContext
             _barcodeProcessor.BarcodeRejected += OnBarcodeRejected;
         }
 
+        // Initialize update service
+        _updateService = new UpdateService("https://github.com/eng-bf/shipvillan-win");
+        _updateService.UpdateStatusChanged += OnUpdateStatusChanged;
+        _updateService.UpdateError += OnUpdateError;
+
         // Build context menu
         _contextMenu = CreateContextMenu();
 
@@ -63,6 +70,9 @@ internal sealed class TrayAppContext : ApplicationContext
         {
             TryConnectToComPort(_config.ComPort);
         }
+
+        // Initialize update service (async, fire and forget)
+        _ = _updateService.InitializeAsync();
     }
 
     /// <summary>
@@ -116,12 +126,23 @@ internal sealed class TrayAppContext : ApplicationContext
             Enabled = false // Non-clickable, just for display
         };
 
+        // Version item
+        var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "Unknown";
+        var versionItem = new ToolStripMenuItem($"Version: {version}")
+        {
+            Enabled = false // Non-clickable, just for display
+        };
+
         // Build menu structure
         menu.Items.Add(modeMenu);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_comPortMenu);
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(_statusItem);
+        menu.Items.Add(versionItem);
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add(new ToolStripMenuItem("Check for Updates", null, OnCheckForUpdatesClick));
+        menu.Items.Add(new ToolStripMenuItem("Rollback to Previous Version", null, OnRollbackClick));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("Exit", null, OnExitClick));
 
@@ -379,6 +400,64 @@ internal sealed class TrayAppContext : ApplicationContext
     }
 
     /// <summary>
+    /// Handles the "Check for Updates" menu item click.
+    /// </summary>
+    private async void OnCheckForUpdatesClick(object? sender, EventArgs e)
+    {
+        await _updateService.CheckForUpdatesManuallyAsync();
+    }
+
+    /// <summary>
+    /// Handles the "Rollback to Previous Version" menu item click.
+    /// </summary>
+    private async void OnRollbackClick(object? sender, EventArgs e)
+    {
+        var result = MessageBox.Show(
+            "Are you sure you want to rollback to the previous version?\n\nThis will restart the application.",
+            AppTitle,
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning
+        );
+
+        if (result == DialogResult.Yes)
+        {
+            await _updateService.RollbackToPreviousVersionAsync();
+        }
+    }
+
+    /// <summary>
+    /// Handles update status changes from the UpdateService.
+    /// </summary>
+    private void OnUpdateStatusChanged(object? sender, string status)
+    {
+        Debug.WriteLine($"Update status: {status}");
+
+        // Show notification to user
+        _trayIcon.ShowBalloonTip(
+            3000,
+            "ShipvillanWin Updates",
+            status,
+            ToolTipIcon.Info
+        );
+    }
+
+    /// <summary>
+    /// Handles update errors from the UpdateService.
+    /// </summary>
+    private void OnUpdateError(object? sender, Exception ex)
+    {
+        Debug.WriteLine($"Update error: {ex.Message}");
+
+        // Show error notification
+        _trayIcon.ShowBalloonTip(
+            5000,
+            "ShipvillanWin Update Error",
+            $"Update failed: {ex.Message}",
+            ToolTipIcon.Error
+        );
+    }
+
+    /// <summary>
     /// Handles the "Exit" menu item click.
     /// Initiates application shutdown.
     /// </summary>
@@ -408,6 +487,7 @@ internal sealed class TrayAppContext : ApplicationContext
 
         _contextMenu?.Dispose();
         _comPortManager?.Dispose();
+        _updateService?.Dispose();
 
         base.ExitThreadCore();
     }
@@ -422,6 +502,7 @@ internal sealed class TrayAppContext : ApplicationContext
             _comPortManager?.Dispose();
             _trayIcon?.Dispose();
             _contextMenu?.Dispose();
+            _updateService?.Dispose();
         }
 
         base.Dispose(disposing);
