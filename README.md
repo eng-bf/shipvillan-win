@@ -246,7 +246,7 @@ cd C:\Users\gwin\src\shipvillan-win
 dotnet publish src\ShipvillanWin\ShipvillanWin.csproj -c Release -r win-x86 --self-contained false -o .\publish
 
 # Create Squirrel release package
-.\squirrel.exe pack --packId ShipvillanWin --packVersion 1.0.1 --packDirectory .\publish --releaseDir .\releases
+.\tools\squirrel.exe pack --packId ShipvillanWin --packVersion 1.0.1 --packDirectory .\publish --releaseDir .\releases
 ```
 
 This creates several files in the `releases` folder:
@@ -348,7 +348,7 @@ To test the update mechanism without deploying to production:
 
 ```bash
 # Create a test release with a higher version
-.\squirrel.exe pack --packId ShipvillanWin --packVersion 1.0.2-beta --packDirectory .\publish --releaseDir .\test-releases
+.\tools\squirrel.exe pack --packId ShipvillanWin --packVersion 1.0.2-beta --packDirectory .\publish --releaseDir .\test-releases
 
 # Start a local HTTP server
 cd test-releases
@@ -387,7 +387,7 @@ dotnet run
 dotnet publish src\ShipvillanWin\ShipvillanWin.csproj -c Release -r win-x86 --self-contained false -o .\publish
 
 # Create update package
-.\squirrel.exe pack --packId ShipvillanWin --packVersion X.Y.Z --packDirectory .\publish --releaseDir .\releases
+.\tools\squirrel.exe pack --packId ShipvillanWin --packVersion X.Y.Z --packDirectory .\publish --releaseDir .\releases
 ```
 
 ### Troubleshooting

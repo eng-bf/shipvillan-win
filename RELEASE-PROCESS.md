@@ -39,7 +39,7 @@ dotnet publish src\ShipvillanWin\ShipvillanWin.csproj -c Release -r win-x86 --se
 ### Step 2: Create Squirrel Release Package
 
 ```bash
-.\squirrel.exe pack --packId ShipvillanWin --packVersion 1.0.0 --packDirectory .\publish --releaseDir .\releases
+.\tools\squirrel.exe pack --packId ShipvillanWin --packVersion 1.0.0 --packDirectory .\publish --releaseDir .\releases
 ```
 
 This creates:
@@ -99,7 +99,7 @@ Users can rollback to the previous version:
 
 ```bash
 # Create a test release
-.\squirrel.exe pack --packId ShipvillanWin --packVersion 1.0.1 --packDirectory .\publish --releaseDir .\test-releases
+.\tools\squirrel.exe pack --packId ShipvillanWin --packVersion 1.0.1 --packDirectory .\publish --releaseDir .\test-releases
 
 # Start a local web server
 cd test-releases

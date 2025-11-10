@@ -294,5 +294,4 @@ FodyWeavers.xsd
 
 # Squirrel release artifacts
 releases/
-squirrel.exe
-tools/squirrel/
+tools/

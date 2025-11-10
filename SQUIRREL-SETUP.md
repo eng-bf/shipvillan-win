@@ -35,7 +35,7 @@ After running `download-squirrel.ps1`, you can create releases with:
 dotnet publish src\ShipvillanWin\ShipvillanWin.csproj -c Release -r win-x86 --self-contained false -o .\publish
 
 # Create Squirrel release package
-.\squirrel.exe pack --packId ShipvillanWin --packVersion 1.0.0 --packDirectory .\publish --releaseDir .\releases
+.\tools\squirrel.exe pack --packId ShipvillanWin --packVersion 1.0.0 --packDirectory .\publish --releaseDir .\releases
 ```
 
 This creates:
@@ -65,12 +65,17 @@ Everything works exactly the same! 🎉
 
 ## Troubleshooting
 
-### "squirrel.exe not found"
+### "squirrel.exe not found" or "Update.exe not found"
 
-Run the download script:
+Run the download script to get all required tools:
 ```powershell
 .\download-squirrel.ps1
 ```
+
+This downloads all Squirrel tools to the `tools/` folder, including:
+- `squirrel.exe` - Main tool
+- `Update.exe` - Required for packaging
+- And 20+ other supporting files
 
 ### "Access denied" when running squirrel.exe
 
@@ -107,7 +112,7 @@ If you're setting up automated builds (GitHub Actions, Azure DevOps, etc.), add 
   shell: pwsh
 
 - name: Create Release Package
-  run: .\squirrel.exe pack --packId ShipvillanWin --packVersion ${{ env.VERSION }} --packDirectory .\publish --releaseDir .\releases
+  run: .\tools\squirrel.exe pack --packId ShipvillanWin --packVersion ${{ env.VERSION }} --packDirectory .\publish --releaseDir .\releases
   shell: pwsh
 ```
 
