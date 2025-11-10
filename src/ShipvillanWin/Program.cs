@@ -24,6 +24,8 @@ internal static class Program
 
         try
         {
+            // Enable high DPI support for modern displays
+            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             ApplicationConfiguration.Initialize();
             Application.Run(new TrayAppContext());
         }
