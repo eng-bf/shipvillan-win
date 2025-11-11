@@ -94,6 +94,20 @@ $setupPath = Join-Path $tempDir "Setup.exe"
 Download-File -Url $setupAsset.browser_download_url -OutFile $setupPath
 
 Write-Host ""
+Write-Host "Preparing installation..." -ForegroundColor Yellow
+
+# Add Windows Defender exclusion to prevent false positive warnings
+try {
+    Write-Host "Adding Windows Defender exclusion for Setup.exe..." -ForegroundColor Yellow
+    Add-MpPreference -ExclusionPath $setupPath -ErrorAction Stop
+    Write-Host "Windows Defender exclusion added successfully." -ForegroundColor Green
+}
+catch {
+    Write-Host "Note: Could not add Windows Defender exclusion (requires admin privileges)." -ForegroundColor Yellow
+    Write-Host "If Windows Defender blocks the installer, click 'More info' then 'Run anyway'." -ForegroundColor Yellow
+}
+
+Write-Host ""
 Write-Host "Installing $AppName..." -ForegroundColor Yellow
 
 # Run Setup.exe silently
@@ -124,7 +138,12 @@ catch {
     exit 1
 }
 finally {
-    # Cleanup
+    # Cleanup Windows Defender exclusion
+    if (Test-Path $setupPath) {
+        Remove-MpPreference -ExclusionPath $setupPath -ErrorAction SilentlyContinue
+    }
+
+    # Cleanup temporary files
     if (Test-Path $tempDir) {
         Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue
     }
