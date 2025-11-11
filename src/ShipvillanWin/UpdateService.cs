@@ -1,5 +1,8 @@
 using Squirrel;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Net.Http;
+using System.Text;
 
 namespace ShipvillanWin;
 
@@ -9,6 +12,7 @@ public class UpdateService : IDisposable
     private readonly System.Windows.Forms.Timer _dailyCheckTimer;
     private UpdateManager? _updateManager;
     private bool _isCheckingForUpdates = false;
+    private readonly string _architecture;
 
     public event EventHandler<string>? UpdateStatusChanged;
     public event EventHandler<Exception>? UpdateError;
@@ -16,6 +20,16 @@ public class UpdateService : IDisposable
     public UpdateService(string githubRepoUrl)
     {
         _githubRepoUrl = githubRepoUrl;
+
+        // Detect runtime architecture
+        _architecture = RuntimeInformation.ProcessArchitecture switch
+        {
+            Architecture.X64 => "x64",
+            Architecture.X86 => "x86",
+            _ => "x64" // Default to x64 for other architectures
+        };
+
+        Debug.WriteLine($"UpdateService initialized for {_architecture} architecture");
 
         // Set up daily update check timer (check every hour, but only update after 3pm PST)
         _dailyCheckTimer = new System.Windows.Forms.Timer();
@@ -82,6 +96,21 @@ public class UpdateService : IDisposable
     }
 
     /// <summary>
+    /// Creates an architecture-aware UpdateManager
+    /// </summary>
+    private Task<UpdateManager> CreateUpdateManagerAsync()
+    {
+        // For now, use the standard GitHub URL
+        // The architecture-specific handling is done through different package IDs:
+        // - ShipvillanWin-x86 for 32-bit
+        // - ShipvillanWin-x64 for 64-bit
+        // Note: This requires uploading architecture-specific RELEASES files to GitHub
+        // TODO: Implement proper architecture-specific RELEASES file handling
+        return Task.FromResult(new UpdateManager(_githubRepoUrl));
+    }
+
+
+    /// <summary>
     /// Main update check logic
     /// </summary>
     private async Task CheckForUpdatesAsync(bool silent)
@@ -100,7 +129,7 @@ public class UpdateService : IDisposable
             // Create update manager if not already created
             if (_updateManager == null)
             {
-                _updateManager = new UpdateManager(_githubRepoUrl);
+                _updateManager = await CreateUpdateManagerAsync();
             }
 
             if (!silent)
@@ -164,7 +193,7 @@ public class UpdateService : IDisposable
 
             if (_updateManager == null)
             {
-                _updateManager = new UpdateManager(_githubRepoUrl);
+                _updateManager = await CreateUpdateManagerAsync();
             }
 
             // Get all versions
@@ -274,3 +303,4 @@ public class UpdateService : IDisposable
         _updateManager?.Dispose();
     }
 }
+

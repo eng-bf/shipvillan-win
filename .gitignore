@@ -294,4 +294,10 @@ FodyWeavers.xsd
 
 # Squirrel release artifacts
 releases/
+releases-x86/
+releases-x64/
 tools/
+
+# Build output directories (architecture-specific)
+publish-x86/
+publish-x64/
