@@ -184,6 +184,53 @@ Changes via tray menu auto-save to this file.
 
 ---
 
+## Uninstall
+
+### Complete Removal (Clean Slate)
+
+To completely remove ShipvillanWin from a machine:
+
+**1. Uninstall the application**
+```powershell
+# Stop the app if running
+Stop-Process -Name ShipvillanWin -Force -ErrorAction SilentlyContinue
+
+# Uninstall via Windows Settings
+explorer.exe ms-settings:appsfeatures
+# Search for "ShipvillanWin" and click Uninstall
+```
+
+**OR use Squirrel uninstaller directly:**
+```powershell
+& "$env:LOCALAPPDATA\ShipvillanWin\Update.exe" --uninstall
+```
+
+**2. Remove all configuration and data**
+```powershell
+# Remove app data folder
+Remove-Item -Path "$env:APPDATA\ShipvillanWin" -Recurse -Force -ErrorAction SilentlyContinue
+
+# Remove installation folder
+Remove-Item -Path "$env:LOCALAPPDATA\ShipvillanWin" -Recurse -Force -ErrorAction SilentlyContinue
+
+# Remove auto-start registry entry (if not cleaned by uninstaller)
+Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "ShipvillanWin" -ErrorAction SilentlyContinue
+```
+
+**3. Verify clean removal**
+```powershell
+# Check registry
+Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "ShipvillanWin" -ErrorAction SilentlyContinue
+
+# Check folders
+Test-Path "$env:APPDATA\ShipvillanWin"
+Test-Path "$env:LOCALAPPDATA\ShipvillanWin"
+```
+
+All commands should return nothing/false if removal is complete.
+
+---
+
 ## Notes
 
 - **Repository is private** but releases are public (enables auto-updates without auth)

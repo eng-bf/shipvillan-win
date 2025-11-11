@@ -218,18 +218,51 @@ public class UpdateService : IDisposable
     {
         // Create desktop and start menu shortcuts
         tools.CreateShortcutForThisExe(ShortcutLocation.StartMenu | ShortcutLocation.Desktop);
+
+        // Enable auto-start on installation
+        try
+        {
+            AutoStart.EnsureEnabled();
+            Debug.WriteLine("Auto-start enabled during installation");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to enable auto-start during installation: {ex.Message}");
+        }
     }
 
     private static void OnAppUpdate(SemanticVersion version, IAppTools tools)
     {
         // Update shortcuts
         tools.CreateShortcutForThisExe(ShortcutLocation.StartMenu | ShortcutLocation.Desktop);
+
+        // Ensure auto-start remains enabled after update
+        try
+        {
+            AutoStart.EnsureEnabled();
+            Debug.WriteLine("Auto-start re-enabled during update");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to re-enable auto-start during update: {ex.Message}");
+        }
     }
 
     private static void OnAppUninstall(SemanticVersion version, IAppTools tools)
     {
         // Remove shortcuts
         tools.RemoveShortcutForThisExe(ShortcutLocation.StartMenu | ShortcutLocation.Desktop);
+
+        // Disable auto-start on uninstall
+        try
+        {
+            AutoStart.Disable();
+            Debug.WriteLine("Auto-start disabled during uninstall");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to disable auto-start during uninstall: {ex.Message}");
+        }
     }
 
     #endregion
