@@ -1,8 +1,12 @@
 using System;
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.Versioning;
 using System.Threading;
 using System.Windows.Forms;
+
+// Mark the assembly as Squirrel-aware for auto-updates
+[assembly: AssemblyMetadata("SquirrelAwareVersion", "1")]
 
 namespace ShipvillanWin;
 
@@ -25,15 +29,10 @@ internal static class Program
 
         try
         {
-            // In Debug builds, enable debug output
+            // In Debug builds, enable console trace output
 #if DEBUG
-            // Option A: Console output (only works if you change OutputType to Exe temporarily)
             Trace.Listeners.Add(new ConsoleTraceListener());
-
-            // Option B: File output (uncomment to enable persistent logging)
-            // FileLogger.Enable();
-
-            Debug.WriteLine("Debug output enabled - all Debug.WriteLine calls will be captured");
+            Debug.WriteLine("Debug output enabled - use DebugView to see logs");
 #endif
 
             // Enable high DPI support for modern displays
