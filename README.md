@@ -55,6 +55,8 @@ To see debug logs, use [DebugView](https://learn.microsoft.com/sysinternals/down
 
 ## Publishing a New Release
 
+ShipvillanWin supports both **x86 (32-bit)** and **x64 (64-bit)** architectures. The build process creates separate packages for each architecture, and the installer automatically detects and installs the correct version.
+
 ### 1. Update Version
 
 Edit `src/ShipvillanWin/ShipvillanWin.csproj`:
@@ -77,33 +79,49 @@ Edit `src/ShipvillanWin/ShipvillanWin.csproj`:
 
 This downloads all packaging tools to the `tools/` folder.
 
-### 3. Build Release Package
+### 3. Build Release Packages (Both Architectures)
+
+Use the automated build script:
 
 ```bash
-# Build the application
-dotnet publish src\ShipvillanWin\ShipvillanWin.csproj -c Release -r win-x86 --self-contained false -o .\publish
-
-# Create installer package
-.\tools\squirrel.exe pack --packId ShipvillanWin --packVersion 1.0.1 --packDirectory .\publish --releaseDir .\releases --allowUnaware
+.\build-release.ps1 -Version 1.0.1
 ```
 
-This creates:
-- `releases/ShipvillanWinSetup.exe` - Installer
-- `releases/ShipvillanWin-1.0.1-full.nupkg` - Update package
-- `releases/RELEASES` - Metadata file
+This script will:
+- Build both x86 and x64 versions
+- Package them with Squirrel
+- Create organized release folders
+
+**Output:**
+- `releases-x86/Setup-x86.exe` - x86 installer
+- `releases-x86/ShipvillanWin-x86-1.0.1-full.nupkg` - x86 update package
+- `releases-x86/RELEASES-x86` - x86 metadata file
+- `releases-x64/Setup-x64.exe` - x64 installer
+- `releases-x64/ShipvillanWin-x64-1.0.1-full.nupkg` - x64 update package
+- `releases-x64/RELEASES-x64` - x64 metadata file
 
 ### 4. Create GitHub Release
 
 1. Go to: https://github.com/eng-bf/shipvillan-win/releases/new
 2. Tag: `v1.0.1` (must match version)
 3. Title: `ShipvillanWin v1.0.1`
-4. Attach files:
-   - `ShipvillanWinSetup.exe` (rename to `Setup.exe`)
-   - `ShipvillanWin-1.0.1-full.nupkg`
-   - `RELEASES`
-5. Click **Publish Release**
+4. Attach **ALL** files from both architectures:
+   - `Setup-x86.exe`
+   - `ShipvillanWin-x86-1.0.1-full.nupkg`
+   - `RELEASES-x86`
+   - `Setup-x64.exe`
+   - `ShipvillanWin-x64-1.0.1-full.nupkg`
+   - `RELEASES-x64`
+5. **IMPORTANT**: Also upload a copy of `RELEASES-x64` renamed to just `RELEASES` (this enables auto-updates for x64 systems)
+6. Click **Publish Release**
 
-**Done!** Warehouse machines will auto-update after 3pm PST (or manually via tray menu).
+**Done!** The installer will automatically detect the system architecture and install the correct version. Warehouse machines will auto-update after 3pm PST (or manually via tray menu).
+
+#### Auto-Update Notes
+
+- **x64 systems**: Will auto-update correctly using the `RELEASES` file
+- **x86 systems**: Currently require manual reinstall for architecture changes (auto-updates work within the same architecture)
+- **Future improvement**: Full architecture-aware auto-updating can be implemented in UpdateService.cs
 
 ---
 
@@ -233,8 +251,10 @@ All commands should return nothing/false if removal is complete.
 
 ## Notes
 
+- **Dual architecture support** - Automatically detects and installs x86 or x64 version
 - **Repository is private** but releases are public (enables auto-updates without auth)
 - **Auto-updates check daily** but only install after 3pm PST
+- **Architecture-aware updates** - x86 installs stay on x86, x64 installs stay on x64
 - **IT can force update** anytime via tray menu "Check for Updates"
 - **Rollback available** via tray menu "Rollback to Previous Version"
 - **Three operation modes** can be switched via tray menu (requires app restart)

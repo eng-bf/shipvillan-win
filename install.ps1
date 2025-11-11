@@ -17,6 +17,12 @@ Write-Host "   ShipvillanWin Installer" -ForegroundColor Cyan
 Write-Host "=====================================" -ForegroundColor Cyan
 Write-Host ""
 
+# Detect system architecture
+$Is64Bit = [Environment]::Is64BitOperatingSystem
+$Architecture = if ($Is64Bit) { "x64" } else { "x86" }
+Write-Host "Detected system architecture: $Architecture" -ForegroundColor Cyan
+Write-Host ""
+
 # Function to get latest release info from GitHub
 function Get-LatestRelease {
     try {
@@ -74,11 +80,14 @@ $version = $release.tag_name
 Write-Host ""
 Write-Host "Latest version: $version" -ForegroundColor Green
 
-# Find Setup.exe in release assets
-$setupAsset = $release.assets | Where-Object { $_.name -eq "Setup.exe" }
+# Find architecture-specific Setup.exe in release assets
+$setupFileName = "Setup-$Architecture.exe"
+$setupAsset = $release.assets | Where-Object { $_.name -eq $setupFileName }
 
 if (!$setupAsset) {
-    Write-Error "Setup.exe not found in release assets"
+    Write-Error "$setupFileName not found in release assets"
+    Write-Host "Available assets:" -ForegroundColor Yellow
+    $release.assets | ForEach-Object { Write-Host "  - $($_.name)" }
     exit 1
 }
 
@@ -89,8 +98,8 @@ if (Test-Path $tempDir) {
 }
 New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
 
-# Download Setup.exe
-$setupPath = Join-Path $tempDir "Setup.exe"
+# Download architecture-specific Setup.exe
+$setupPath = Join-Path $tempDir $setupFileName
 Download-File -Url $setupAsset.browser_download_url -OutFile $setupPath
 
 Write-Host ""
@@ -98,7 +107,7 @@ Write-Host "Preparing installation..." -ForegroundColor Yellow
 
 # Add Windows Defender exclusion to prevent false positive warnings
 try {
-    Write-Host "Adding Windows Defender exclusion for Setup.exe..." -ForegroundColor Yellow
+    Write-Host "Adding Windows Defender exclusion for $setupFileName..." -ForegroundColor Yellow
     Add-MpPreference -ExclusionPath $setupPath -ErrorAction Stop
     Write-Host "Windows Defender exclusion added successfully." -ForegroundColor Green
 }
@@ -120,7 +129,7 @@ try {
         Write-Host "   Installation Successful!" -ForegroundColor Green
         Write-Host "=====================================" -ForegroundColor Green
         Write-Host ""
-        Write-Host "$AppName has been installed and will start automatically." -ForegroundColor Green
+        Write-Host "$AppName ($Architecture) has been installed and will start automatically." -ForegroundColor Green
         Write-Host "The application will:" -ForegroundColor Cyan
         Write-Host "  - Run in the system tray" -ForegroundColor Cyan
         Write-Host "  - Start automatically at login" -ForegroundColor Cyan
