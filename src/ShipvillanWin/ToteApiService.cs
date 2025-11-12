@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -138,11 +139,22 @@ public class ToteApiService : IDisposable
 /// </summary>
 public class ToteData
 {
+    [JsonPropertyName("id")]
     public string? Id { get; set; }
+
+    [JsonPropertyName("legacy_id")]
     public int? LegacyId { get; set; }
+
+    [JsonPropertyName("name")]
     public string? Name { get; set; }
+
+    [JsonPropertyName("barcode")]
     public string? Barcode { get; set; }
+
+    [JsonPropertyName("warehouse")]
     public WarehouseData? Warehouse { get; set; }
+
+    [JsonPropertyName("orders")]
     public OrderData[]? Orders { get; set; }
 }
 
@@ -151,10 +163,19 @@ public class ToteData
 /// </summary>
 public class WarehouseData
 {
+    [JsonPropertyName("id")]
     public string? Id { get; set; }
+
+    [JsonPropertyName("legacy_id")]
     public int? LegacyId { get; set; }
+
+    [JsonPropertyName("account_id")]
     public string? AccountId { get; set; }
+
+    [JsonPropertyName("identifier")]
     public string? Identifier { get; set; }
+
+    [JsonPropertyName("profile")]
     public string? Profile { get; set; }
 }
 
@@ -163,10 +184,21 @@ public class WarehouseData
 /// </summary>
 public class OrderData
 {
+    [JsonPropertyName("id")]
     public string? Id { get; set; }
+
+    [JsonPropertyName("legacy_id")]
     public int? LegacyId { get; set; }
+
+    [JsonPropertyName("order_number")]
     public string? OrderNumber { get; set; }
+
+    [JsonPropertyName("account_id")]
     public string? AccountId { get; set; }
+
+    [JsonPropertyName("partner_order_id")]
     public string? PartnerOrderId { get; set; }
+
+    [JsonPropertyName("fulfillment_status")]
     public string? FulfillmentStatus { get; set; }
 }

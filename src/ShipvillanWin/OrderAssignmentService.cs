@@ -71,7 +71,7 @@ public class OrderAssignmentService : IOrderAssignmentService, IDisposable
             var requestPayload = new
             {
                 cross_tag_code = crossTagCode,
-                order_id = order.PartnerOrderId ?? order.Id ?? "", // Prefer PartnerOrderId, fallback to Id
+                order_id = order.LegacyId?.ToString() ?? "", // Use legacy_id from tote order response
                 order_number = order.OrderNumber,
                 bin_id = toteBarcode,
                 customer_id = order.AccountId ?? "",

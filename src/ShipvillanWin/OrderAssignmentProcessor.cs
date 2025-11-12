@@ -63,8 +63,12 @@ public class OrderAssignmentProcessor : IDisposable
             // Fire and forget - don't await, we want to return immediately
             _ = ForwardBarcodeAsync(barcode);
 
-            // Check if this barcode is a tote via API (fire and forget, non-blocking)
-            _ = CheckAndStoreToteAsync(barcode);
+            // Skip tote API check for CT- barcodes (they will never be totes)
+            if (!barcode.StartsWith("CT-", StringComparison.OrdinalIgnoreCase))
+            {
+                // Check if this barcode is a tote via API (fire and forget, non-blocking)
+                _ = CheckAndStoreToteAsync(barcode);
+            }
 
             // Now process the barcode for order assignment logic (non-blocking)
             await ProcessOrderAssignmentLogicAsync(barcode);
