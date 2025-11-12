@@ -5,16 +5,17 @@ namespace ShipvillanWin;
 
 /// <summary>
 /// Service interface for order assignment operations.
-/// Performs async mutations when a tote and order barcode are scanned.
+/// Performs async operations to link cross-tag codes to orders in totes.
 /// </summary>
 public interface IOrderAssignmentService
 {
     /// <summary>
-    /// Assigns an order to a tote via async mutation.
+    /// Links a cross-tag code to an order in a tote via the link_order endpoint.
     /// </summary>
-    /// <param name="toteBarcode">The tote barcode (includes 'tote:' prefix)</param>
-    /// <param name="orderBarcode">The order barcode (any alphanumeric)</param>
+    /// <param name="toteBarcode">The tote barcode</param>
+    /// <param name="toteData">The tote data including order information</param>
+    /// <param name="crossTagCode">The CT- cross-tag code</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>True if assignment succeeded, false otherwise</returns>
-    Task<bool> AssignOrderToToteAsync(string toteBarcode, string orderBarcode, CancellationToken cancellationToken);
+    /// <returns>True if link succeeded, false otherwise</returns>
+    Task<bool> LinkOrderAsync(string toteBarcode, ToteData toteData, string crossTagCode, CancellationToken cancellationToken);
 }

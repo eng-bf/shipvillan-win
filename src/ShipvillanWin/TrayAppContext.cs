@@ -23,6 +23,7 @@ internal sealed class TrayAppContext : ApplicationContext
     private readonly ComPortManager _comPortManager;
     private readonly BarcodeProcessor? _barcodeProcessor;
     private readonly OrderAssignmentProcessor? _orderAssignmentProcessor;
+    private readonly OrderAssignmentService? _orderAssignmentService;
     private readonly UpdateService _updateService;
 
     // Menu items that need to be updated
@@ -56,8 +57,8 @@ internal sealed class TrayAppContext : ApplicationContext
         }
         else if (_config.Mode == OperationMode.OrderAssignment)
         {
-            var orderAssignmentService = new OrderAssignmentService();
-            _orderAssignmentProcessor = new OrderAssignmentProcessor(_config, orderAssignmentService);
+            _orderAssignmentService = new OrderAssignmentService();
+            _orderAssignmentProcessor = new OrderAssignmentProcessor(_config, _orderAssignmentService);
             _orderAssignmentProcessor.AssignmentCompleted += OnAssignmentCompleted;
         }
 
@@ -548,6 +549,8 @@ internal sealed class TrayAppContext : ApplicationContext
         if (disposing)
         {
             _comPortManager?.Dispose();
+            _orderAssignmentProcessor?.Dispose();
+            _orderAssignmentService?.Dispose();
             _trayIcon?.Dispose();
             _contextMenu?.Dispose();
             _updateService?.Dispose();

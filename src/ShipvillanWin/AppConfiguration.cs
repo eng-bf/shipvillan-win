@@ -67,6 +67,27 @@ public class AppConfiguration
     public bool AppendEnterKey { get; set; } = true;
 
     /// <summary>
+    /// Base URL for the backend API.
+    /// Default: https://api.bajafulfillment.com (production)
+    /// Staging: https://bf-api.rezlab.dev
+    /// Local: http://localhost:3000
+    /// </summary>
+    [JsonPropertyName("apiBaseUrl")]
+    public string ApiBaseUrl { get; set; } = "https://api.bajafulfillment.com";
+
+    /// <summary>
+    /// Timeout in milliseconds for API calls.
+    /// </summary>
+    [JsonPropertyName("apiTimeoutMs")]
+    public int ApiTimeoutMs { get; set; } = 3000;
+
+    /// <summary>
+    /// URL for the link_order endpoint used in Order Assignment mode.
+    /// </summary>
+    [JsonPropertyName("linkOrderUrl")]
+    public string LinkOrderUrl { get; set; } = "http://152.232.229.246:5113/link_order";
+
+    /// <summary>
     /// Loads configuration from disk. Returns default configuration if file doesn't exist.
     /// </summary>
     public static AppConfiguration Load()
