@@ -185,8 +185,13 @@ internal sealed class TrayAppContext : ApplicationContext
     {
         if (e.Button == MouseButtons.Left)
         {
-            // Show context menu at cursor position
-            _contextMenu.Show(Cursor.Position);
+            // Use reflection to call the internal ShowContextMenu method
+            // This ensures proper focus handling and click-outside-to-close behavior
+            var method = typeof(NotifyIcon).GetMethod(
+                "ShowContextMenu",
+                BindingFlags.Instance | BindingFlags.NonPublic
+            );
+            method?.Invoke(_trayIcon, null);
         }
     }
 
