@@ -50,7 +50,7 @@ internal sealed class TrayAppContext : ApplicationContext
         // Initialize barcode processor based on operation mode
         if (_config.Mode == OperationMode.Interception)
         {
-            var interceptionService = new InterceptionService();
+            var interceptionService = new InterceptionService(_config.CrossTagApiBaseUrl, _config.CrossTagApiTimeoutMs);
             _barcodeProcessor = new BarcodeProcessor(_config, interceptionService);
             _barcodeProcessor.ProcessingStatusChanged += OnProcessingStatusChanged;
             _barcodeProcessor.BarcodeRejected += OnBarcodeRejected;

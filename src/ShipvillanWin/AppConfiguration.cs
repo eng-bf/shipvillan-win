@@ -88,6 +88,19 @@ public class AppConfiguration
     public string LinkOrderUrl { get; set; } = "http://152.232.229.246:5113/link_order";
 
     /// <summary>
+    /// Base URL for the cross-tag API used in Interception (US) mode.
+    /// Used to look up order information for CT- barcodes.
+    /// </summary>
+    [JsonPropertyName("crossTagApiBaseUrl")]
+    public string CrossTagApiBaseUrl { get; set; } = "http://152.232.229.246:5113";
+
+    /// <summary>
+    /// Timeout in milliseconds for cross-tag API calls in Interception (US) mode.
+    /// </summary>
+    [JsonPropertyName("crossTagApiTimeoutMs")]
+    public int CrossTagApiTimeoutMs { get; set; } = 10000;
+
+    /// <summary>
     /// Loads configuration from disk. Returns default configuration if file doesn't exist.
     /// </summary>
     public static AppConfiguration Load()
