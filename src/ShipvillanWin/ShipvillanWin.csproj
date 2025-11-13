@@ -15,9 +15,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
 
     <!-- Version information for Squirrel updates -->
-    <Version>1.0.4</Version>
-    <AssemblyVersion>1.0.4</AssemblyVersion>
-    <FileVersion>1.0.4</FileVersion>
+    <Version>1.0.5</Version>
+    <AssemblyVersion>1.0.5</AssemblyVersion>
+    <FileVersion>1.0.5</FileVersion>
   </PropertyGroup>
 
   <!-- Platform target is now specified via RuntimeIdentifier during publish -->
