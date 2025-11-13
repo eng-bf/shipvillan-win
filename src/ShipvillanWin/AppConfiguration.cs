@@ -88,6 +88,13 @@ public class AppConfiguration
     public string LinkOrderUrl { get; set; } = "http://152.232.229.246:5113/link_order";
 
     /// <summary>
+    /// Default SKU to forward when a CT- barcode is scanned with an active tote in Order Assignment mode.
+    /// Instead of forwarding the actual CT- barcode value, this default value is forwarded.
+    /// </summary>
+    [JsonPropertyName("defaultLilicaSku")]
+    public string DefaultLilicaSku { get; set; } = "011299";
+
+    /// <summary>
     /// Base URL for the cross-tag API used in Interception (US) mode.
     /// Used to look up order information for CT- barcodes.
     /// </summary>

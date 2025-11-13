@@ -58,10 +58,21 @@ public class OrderAssignmentProcessor : IDisposable
         try
         {
             // CRITICAL: Forward barcode immediately, without waiting
-            Debug.WriteLine($"OrderAssignmentProcessor: Forwarding barcode '{barcode}' immediately");
+            // For CT- barcodes with an active tote, forward the default SKU instead
+            string barcodeToForward = barcode;
+
+            if (barcode.StartsWith("CT-", StringComparison.OrdinalIgnoreCase) && _pendingToteData != null)
+            {
+                barcodeToForward = _config.DefaultLilicaSku;
+                Debug.WriteLine($"OrderAssignmentProcessor: CT- barcode scanned with active tote, forwarding default SKU '{barcodeToForward}' instead of '{barcode}'");
+            }
+            else
+            {
+                Debug.WriteLine($"OrderAssignmentProcessor: Forwarding barcode '{barcode}' immediately");
+            }
 
             // Fire and forget - don't await, we want to return immediately
-            _ = ForwardBarcodeAsync(barcode);
+            _ = ForwardBarcodeAsync(barcodeToForward);
 
             // Skip tote API check for CT- barcodes (they will never be totes)
             if (!barcode.StartsWith("CT-", StringComparison.OrdinalIgnoreCase))
