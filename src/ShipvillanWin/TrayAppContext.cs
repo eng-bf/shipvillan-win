@@ -50,7 +50,7 @@ internal sealed class TrayAppContext : ApplicationContext
         // Initialize barcode processor based on operation mode
         if (_config.Mode == OperationMode.Interception)
         {
-            var interceptionService = new InterceptionService();
+            var interceptionService = new InterceptionService(_config.CrossTagApiBaseUrl, _config.CrossTagApiTimeoutMs);
             _barcodeProcessor = new BarcodeProcessor(_config, interceptionService);
             _barcodeProcessor.ProcessingStatusChanged += OnProcessingStatusChanged;
             _barcodeProcessor.BarcodeRejected += OnBarcodeRejected;
@@ -185,8 +185,13 @@ internal sealed class TrayAppContext : ApplicationContext
     {
         if (e.Button == MouseButtons.Left)
         {
-            // Show context menu at cursor position
-            _contextMenu.Show(Cursor.Position);
+            // Use reflection to call the internal ShowContextMenu method
+            // This ensures proper focus handling and click-outside-to-close behavior
+            var method = typeof(NotifyIcon).GetMethod(
+                "ShowContextMenu",
+                BindingFlags.Instance | BindingFlags.NonPublic
+            );
+            method?.Invoke(_trayIcon, null);
         }
     }
 

@@ -301,3 +301,4 @@ tools/
 # Build output directories (architecture-specific)
 publish-x86/
 publish-x64/
+github-release/

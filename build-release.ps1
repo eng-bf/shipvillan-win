@@ -1,5 +1,5 @@
-# ShipvillanWin Dual-Architecture Build Script
-# Builds and packages both x86 and x64 versions
+# ShipvillanWin Build Script
+# Builds both x86 and x64 versions, but auto-updates only work for x64
 #
 # Usage: .\build-release.ps1 -Version 1.0.1
 
@@ -12,6 +12,7 @@ $ErrorActionPreference = "Stop"
 
 $ProjectPath = "src\ShipvillanWin\ShipvillanWin.csproj"
 $SquirrelExe = ".\tools\squirrel.exe"
+$GithubReleaseDir = ".\github-release"
 
 Write-Host "=====================================" -ForegroundColor Cyan
 Write-Host "   ShipvillanWin Build Script" -ForegroundColor Cyan
@@ -32,6 +33,7 @@ if (Test-Path ".\publish-x86") { Remove-Item ".\publish-x86" -Recurse -Force }
 if (Test-Path ".\publish-x64") { Remove-Item ".\publish-x64" -Recurse -Force }
 if (Test-Path ".\releases-x86") { Remove-Item ".\releases-x86" -Recurse -Force }
 if (Test-Path ".\releases-x64") { Remove-Item ".\releases-x64" -Recurse -Force }
+if (Test-Path $GithubReleaseDir) { Remove-Item $GithubReleaseDir -Recurse -Force }
 
 Write-Host ""
 Write-Host "=====================================" -ForegroundColor Cyan
@@ -93,10 +95,10 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Package x64 with Squirrel
+# Package x64 with Squirrel (use "ShipvillanWin" as package ID for auto-updates)
 Write-Host "Packaging x64 with Squirrel..." -ForegroundColor Yellow
 & $SquirrelExe pack `
-    --packId ShipvillanWin-x64 `
+    --packId ShipvillanWin `
     --packVersion $Version `
     --packDirectory .\publish-x64 `
     --releaseDir .\releases-x64 `
@@ -110,48 +112,47 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "x64 build complete!" -ForegroundColor Green
 Write-Host ""
 
-# Rename Setup.exe files for clarity
-Write-Host "Renaming installers for clarity..." -ForegroundColor Yellow
+# Create GitHub release folder with all files
+Write-Host "Preparing GitHub release folder..." -ForegroundColor Yellow
+New-Item -ItemType Directory -Path $GithubReleaseDir -Force | Out-Null
+
+# Copy x86 files
+Write-Host "Copying x86 files..." -ForegroundColor Yellow
+Copy-Item ".\releases-x86\ShipvillanWin-x86-$Version-full.nupkg" $GithubReleaseDir -Force
 if (Test-Path ".\releases-x86\ShipvillanWin-x86Setup.exe") {
-    Rename-Item ".\releases-x86\ShipvillanWin-x86Setup.exe" "Setup-x86.exe"
-}
-if (Test-Path ".\releases-x64\ShipvillanWin-x64Setup.exe") {
-    Rename-Item ".\releases-x64\ShipvillanWin-x64Setup.exe" "Setup-x64.exe"
+    Copy-Item ".\releases-x86\ShipvillanWin-x86Setup.exe" "$GithubReleaseDir\Setup-x86.exe" -Force
 }
 
-# Rename RELEASES files for architecture-specific updates
-Write-Host "Renaming RELEASES files..." -ForegroundColor Yellow
-if (Test-Path ".\releases-x86\RELEASES") {
-    Copy-Item ".\releases-x86\RELEASES" ".\releases-x86\RELEASES-x86"
+# Copy x64 files
+Write-Host "Copying x64 files..." -ForegroundColor Yellow
+Copy-Item ".\releases-x64\ShipvillanWin-$Version-full.nupkg" $GithubReleaseDir -Force
+if (Test-Path ".\releases-x64\ShipvillanWinSetup.exe") {
+    Copy-Item ".\releases-x64\ShipvillanWinSetup.exe" "$GithubReleaseDir\Setup-x64.exe" -Force
 }
-if (Test-Path ".\releases-x64\RELEASES") {
-    Copy-Item ".\releases-x64\RELEASES" ".\releases-x64\RELEASES-x64"
-}
+
+# Copy x64 RELEASES file as the main RELEASES file (for auto-updates)
+Write-Host "Setting up auto-update (x64 only)..." -ForegroundColor Yellow
+Copy-Item ".\releases-x64\RELEASES" "$GithubReleaseDir\RELEASES" -Force
 
 Write-Host ""
 Write-Host "=====================================" -ForegroundColor Green
 Write-Host "   Build Complete!" -ForegroundColor Green
 Write-Host "=====================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "Release files created:" -ForegroundColor Cyan
+Write-Host "GitHub Release folder ready:" -ForegroundColor Cyan
+Write-Host "  Location: .\github-release\" -ForegroundColor White
 Write-Host ""
-Write-Host "x86 (32-bit):" -ForegroundColor Yellow
-Write-Host "  .\releases-x86\Setup-x86.exe"
-Write-Host "  .\releases-x86\ShipvillanWin-x86-$Version-full.nupkg"
-Write-Host "  .\releases-x86\RELEASES-x86"
-Write-Host ""
-Write-Host "x64 (64-bit):" -ForegroundColor Yellow
-Write-Host "  .\releases-x64\Setup-x64.exe"
-Write-Host "  .\releases-x64\ShipvillanWin-x64-$Version-full.nupkg"
-Write-Host "  .\releases-x64\RELEASES-x64"
+Write-Host "Files to upload to GitHub release v$Version" -ForegroundColor Yellow
+Get-ChildItem $GithubReleaseDir | ForEach-Object {
+    Write-Host "  - $($_.Name)" -ForegroundColor White
+}
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
-Write-Host "1. Create GitHub release: v$Version"
-Write-Host "2. Upload ALL files from both releases-x86 and releases-x64 folders"
-Write-Host "3. IMPORTANT: Copy RELEASES-x64 to RELEASES (for auto-updater compatibility)"
-Write-Host "4. Ensure release is published (not draft)"
+Write-Host "1. Create GitHub release: v$Version" -ForegroundColor White
+Write-Host "2. Upload ALL files from .\github-release\ folder" -ForegroundColor White
+Write-Host "3. Publish the release (not draft)" -ForegroundColor White
 Write-Host ""
-Write-Host "Note: The auto-updater currently uses the RELEASES file (not architecture-specific)." -ForegroundColor Yellow
-Write-Host "Copying RELEASES-x64 to RELEASES ensures x64 systems get x64 updates." -ForegroundColor Yellow
-Write-Host "x86 systems will need to manually reinstall when upgrading." -ForegroundColor Yellow
+Write-Host "Auto-update configuration:" -ForegroundColor Yellow
+Write-Host "  - x64 systems: Auto-updates ENABLED (via RELEASES file)" -ForegroundColor Green
+Write-Host "  - x86 systems: Manual install only (no auto-update)" -ForegroundColor Yellow
 Write-Host ""

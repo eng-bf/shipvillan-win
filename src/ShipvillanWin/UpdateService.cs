@@ -1,6 +1,5 @@
 using Squirrel;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Net.Http;
 using System.Text;
 
@@ -12,7 +11,6 @@ public class UpdateService : IDisposable
     private readonly System.Windows.Forms.Timer _dailyCheckTimer;
     private UpdateManager? _updateManager;
     private bool _isCheckingForUpdates = false;
-    private readonly string _architecture;
 
     public event EventHandler<string>? UpdateStatusChanged;
     public event EventHandler<Exception>? UpdateError;
@@ -21,15 +19,7 @@ public class UpdateService : IDisposable
     {
         _githubRepoUrl = githubRepoUrl;
 
-        // Detect runtime architecture
-        _architecture = RuntimeInformation.ProcessArchitecture switch
-        {
-            Architecture.X64 => "x64",
-            Architecture.X86 => "x86",
-            _ => "x64" // Default to x64 for other architectures
-        };
-
-        Debug.WriteLine($"UpdateService initialized for {_architecture} architecture");
+        Debug.WriteLine($"UpdateService initialized (x64)");
 
         // Set up daily update check timer (check every hour, but only update after 3pm PST)
         _dailyCheckTimer = new System.Windows.Forms.Timer();
@@ -96,16 +86,12 @@ public class UpdateService : IDisposable
     }
 
     /// <summary>
-    /// Creates an architecture-aware UpdateManager
+    /// Creates the UpdateManager for checking and applying updates from GitHub
     /// </summary>
     private Task<UpdateManager> CreateUpdateManagerAsync()
     {
-        // For now, use the standard GitHub URL
-        // The architecture-specific handling is done through different package IDs:
-        // - ShipvillanWin-x86 for 32-bit
-        // - ShipvillanWin-x64 for 64-bit
-        // Note: This requires uploading architecture-specific RELEASES files to GitHub
-        // TODO: Implement proper architecture-specific RELEASES file handling
+        // UpdateManager will fetch the RELEASES file from the GitHub repo
+        // and check for updates to the ShipvillanWin package
         return Task.FromResult(new UpdateManager(_githubRepoUrl));
     }
 
