@@ -39,7 +39,7 @@ public class InterceptionService : IInterceptionService, IDisposable
             Debug.WriteLine($"[InterceptionService] ========== CROSS-TAG API REQUEST ==========");
             Debug.WriteLine($"[InterceptionService] Barcode: '{barcode}'");
 
-            var url = $"{_crossTagApiBaseUrl}/get_ct_info/{Uri.EscapeDataString(barcode)}";
+            var url = $"{_crossTagApiBaseUrl}/get_ct_info/{Uri.EscapeDataString(barcode)}?update_scan_date=true";
             Debug.WriteLine($"[InterceptionService] URL: {url}");
             Debug.WriteLine($"[InterceptionService] Making GET request...");
 
