@@ -56,10 +56,14 @@ internal sealed class TrayAppContext : ApplicationContext
             _barcodeProcessor.ProcessingStatusChanged += OnProcessingStatusChanged;
             _barcodeProcessor.BarcodeRejected += OnBarcodeRejected;
         }
-        else if (_config.Mode == OperationMode.OrderAssignment)
+
+        // Initialize toast notification manager (before order assignment processor)
+        _toastManager = new ToastNotificationManager();
+
+        if (_config.Mode == OperationMode.OrderAssignment)
         {
             _orderAssignmentService = new OrderAssignmentService();
-            _orderAssignmentProcessor = new OrderAssignmentProcessor(_config, _orderAssignmentService);
+            _orderAssignmentProcessor = new OrderAssignmentProcessor(_config, _orderAssignmentService, _toastManager);
             _orderAssignmentProcessor.AssignmentCompleted += OnAssignmentCompleted;
         }
 
@@ -67,9 +71,6 @@ internal sealed class TrayAppContext : ApplicationContext
         _updateService = new UpdateService("https://github.com/eng-bf/shipvillan-win");
         _updateService.UpdateStatusChanged += OnUpdateStatusChanged;
         _updateService.UpdateError += OnUpdateError;
-
-        // Initialize toast notification manager
-        _toastManager = new ToastNotificationManager();
 
         // Build context menu
         _contextMenu = CreateContextMenu();

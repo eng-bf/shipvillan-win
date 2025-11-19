@@ -16,6 +16,8 @@ public class ToastNotificationManager : IDisposable
     private const string AppId = "BajaFulfillment.ShipvillanWin";
     private const string ScannerErrorTag = "scanner-error";
     private const string ScannerErrorGroup = "scanner-status";
+    private const string CrosstagWarningTag = "crosstag-warning";
+    private const string CrosstagWarningGroup = "crosstag-status";
 
     /// <summary>
     /// Initializes the toast notification manager and registers the app with Windows.
@@ -227,6 +229,59 @@ public class ToastNotificationManager : IDisposable
         catch (Exception ex)
         {
             Debug.WriteLine($"Failed to clear all toast notifications: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Shows a persistent warning notification for Shipvillan crosstag orders (SKU 011299).
+    /// The notification remains in Action Center until CT- tag is scanned.
+    /// Note: Windows Toast notifications don't support custom background colors via standard APIs.
+    /// </summary>
+    public void ShowCrosstagWarning(string orderNumber)
+    {
+        try
+        {
+            // Clear any existing crosstag warning notifications first
+            ToastNotificationManagerCompat.History.Remove(CrosstagWarningTag, CrosstagWarningGroup);
+
+            // Build the persistent toast notification
+            var toastContent = new ToastContentBuilder()
+                .AddText("Shipvillan - Crosstag", hintStyle: AdaptiveTextStyle.Title)
+                .AddText($"Order: {orderNumber}", hintStyle: AdaptiveTextStyle.Subtitle)
+                .AddText("Please Scan Crosstag Label")
+                .SetToastScenario(ToastScenario.Reminder) // Persistent notification that stays until dismissed
+                .AddAttributionText("⚠️ Special Handling Required"); // Visual indicator
+
+            // Show the notification with tag and group for management
+            toastContent.Show(toast =>
+            {
+                toast.Tag = CrosstagWarningTag;
+                toast.Group = CrosstagWarningGroup;
+                toast.ExpirationTime = DateTime.Now.AddHours(1); // Expires after 1 hour
+            });
+
+            Debug.WriteLine($"Toast notification shown: Crosstag warning for order {orderNumber}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to show crosstag warning notification: {ex.Message}");
+            // Don't throw - notifications are non-critical to app functionality
+        }
+    }
+
+    /// <summary>
+    /// Clears the crosstag warning notification when CT- tag is scanned.
+    /// </summary>
+    public void ClearCrosstagWarning()
+    {
+        try
+        {
+            ToastNotificationManagerCompat.History.Remove(CrosstagWarningTag, CrosstagWarningGroup);
+            Debug.WriteLine("Toast notification cleared: Crosstag warning resolved");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to clear crosstag warning notification: {ex.Message}");
         }
     }
 
