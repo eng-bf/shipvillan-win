@@ -231,6 +231,9 @@ Remove-Item -Path "$env:APPDATA\ShipvillanWin" -Recurse -Force -ErrorAction Sile
 # Remove installation folder
 Remove-Item -Path "$env:LOCALAPPDATA\ShipvillanWin" -Recurse -Force -ErrorAction SilentlyContinue
 
+# Remove Start Menu shortcut (for toast notifications)
+Remove-Item -Path "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\ShipvillanWin.lnk" -Force -ErrorAction SilentlyContinue
+
 # Remove auto-start registry entry (if not cleaned by uninstaller)
 Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "ShipvillanWin" -ErrorAction SilentlyContinue
 ```
@@ -243,6 +246,9 @@ Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Na
 # Check folders
 Test-Path "$env:APPDATA\ShipvillanWin"
 Test-Path "$env:LOCALAPPDATA\ShipvillanWin"
+
+# Check Start Menu shortcut
+Test-Path "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\ShipvillanWin.lnk"
 ```
 
 All commands should return nothing/false if removal is complete.

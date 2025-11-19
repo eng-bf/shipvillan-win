@@ -25,6 +25,7 @@ internal sealed class TrayAppContext : ApplicationContext
     private readonly OrderAssignmentProcessor? _orderAssignmentProcessor;
     private readonly OrderAssignmentService? _orderAssignmentService;
     private readonly UpdateService _updateService;
+    private readonly ToastNotificationManager _toastManager;
 
     // Menu items that need to be updated
     private ToolStripMenuItem? _statusItem;
@@ -55,10 +56,14 @@ internal sealed class TrayAppContext : ApplicationContext
             _barcodeProcessor.ProcessingStatusChanged += OnProcessingStatusChanged;
             _barcodeProcessor.BarcodeRejected += OnBarcodeRejected;
         }
-        else if (_config.Mode == OperationMode.OrderAssignment)
+
+        // Initialize toast notification manager (before order assignment processor)
+        _toastManager = new ToastNotificationManager();
+
+        if (_config.Mode == OperationMode.OrderAssignment)
         {
             _orderAssignmentService = new OrderAssignmentService();
-            _orderAssignmentProcessor = new OrderAssignmentProcessor(_config, _orderAssignmentService);
+            _orderAssignmentProcessor = new OrderAssignmentProcessor(_config, _orderAssignmentService, _toastManager);
             _orderAssignmentProcessor.AssignmentCompleted += OnAssignmentCompleted;
         }
 
@@ -78,6 +83,11 @@ internal sealed class TrayAppContext : ApplicationContext
         if (!string.IsNullOrEmpty(_config.ComPort))
         {
             TryConnectToComPort(_config.ComPort);
+        }
+        else
+        {
+            // No COM port configured - show error notification
+            _toastManager.ShowScannerNotDetectedError();
         }
 
         // Initialize update service (async, fire and forget)
@@ -234,6 +244,12 @@ internal sealed class TrayAppContext : ApplicationContext
         if (_comPortMenu == null)
             return;
 
+        // Check if the current connection is still healthy
+        if (_comPortManager.IsConnected)
+        {
+            _comPortManager.CheckConnectionHealth();
+        }
+
         _comPortMenu.DropDownItems.Clear();
 
         var ports = ComPortManager.GetAvailablePorts();
@@ -269,12 +285,9 @@ internal sealed class TrayAppContext : ApplicationContext
         catch (Exception ex)
         {
             Debug.WriteLine($"Failed to connect to {portName}: {ex.Message}");
-            MessageBox.Show(
-                $"Failed to connect to {portName}:\n\n{ex.Message}",
-                AppTitle,
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error
-            );
+
+            // Show toast notification for connection failure
+            _toastManager.ShowScannerNotDetectedError();
         }
     }
 
@@ -400,6 +413,17 @@ internal sealed class TrayAppContext : ApplicationContext
         {
             UpdateStatus();
         }
+
+        // Show or clear toast notifications based on connection status
+        if (isConnected)
+        {
+            _toastManager.ClearScannerNotDetectedError();
+            _toastManager.ShowScannerConnected(_comPortManager.CurrentPort ?? "Unknown");
+        }
+        else
+        {
+            _toastManager.ShowScannerNotDetectedError();
+        }
     }
 
     /// <summary>
@@ -486,13 +510,8 @@ internal sealed class TrayAppContext : ApplicationContext
     {
         Debug.WriteLine($"Update status: {status}");
 
-        // Show notification to user
-        _trayIcon.ShowBalloonTip(
-            3000,
-            "ShipvillanWin Updates",
-            status,
-            ToolTipIcon.Info
-        );
+        // Show modern toast notification instead of legacy balloon tip
+        _toastManager.ShowInfo("ShipvillanWin Updates", status);
     }
 
     /// <summary>
@@ -502,13 +521,8 @@ internal sealed class TrayAppContext : ApplicationContext
     {
         Debug.WriteLine($"Update error: {ex.Message}");
 
-        // Show error notification
-        _trayIcon.ShowBalloonTip(
-            5000,
-            "ShipvillanWin Update Error",
-            $"Update failed: {ex.Message}",
-            ToolTipIcon.Error
-        );
+        // Show modern toast notification instead of legacy balloon tip
+        _toastManager.ShowError("ShipvillanWin Update Error", $"Update failed: {ex.Message}");
     }
 
     /// <summary>
@@ -542,6 +556,7 @@ internal sealed class TrayAppContext : ApplicationContext
         _contextMenu?.Dispose();
         _comPortManager?.Dispose();
         _updateService?.Dispose();
+        _toastManager?.Dispose();
 
         base.ExitThreadCore();
     }
@@ -559,6 +574,7 @@ internal sealed class TrayAppContext : ApplicationContext
             _trayIcon?.Dispose();
             _contextMenu?.Dispose();
             _updateService?.Dispose();
+            _toastManager?.Dispose();
         }
 
         base.Dispose(disposing);

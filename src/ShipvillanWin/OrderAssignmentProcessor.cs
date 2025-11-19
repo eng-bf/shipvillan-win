@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,6 +18,7 @@ public class OrderAssignmentProcessor : IDisposable
     private readonly AppConfiguration _config;
     private readonly IOrderAssignmentService _orderAssignmentService;
     private readonly ToteApiService _toteApiService;
+    private readonly ToastNotificationManager _toastManager;
     private readonly SemaphoreSlim _stateLock = new(1, 1);
 
     private string? _pendingToteBarcode = null;
@@ -39,10 +41,14 @@ public class OrderAssignmentProcessor : IDisposable
     /// </summary>
     public int FailureCount => _failureCount;
 
-    public OrderAssignmentProcessor(AppConfiguration config, IOrderAssignmentService orderAssignmentService)
+    public OrderAssignmentProcessor(
+        AppConfiguration config,
+        IOrderAssignmentService orderAssignmentService,
+        ToastNotificationManager toastManager)
     {
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _orderAssignmentService = orderAssignmentService ?? throw new ArgumentNullException(nameof(orderAssignmentService));
+        _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
         _toteApiService = new ToteApiService(config.ApiBaseUrl, config.ApiTimeoutMs);
     }
 
@@ -114,6 +120,21 @@ public class OrderAssignmentProcessor : IDisposable
 
                     var orderCount = toteData.Orders?.Length ?? 0;
                     Debug.WriteLine($"OrderAssignmentProcessor: Confirmed tote '{barcode}' (Name: {toteData.Name}, Orders: {orderCount}). Waiting for CT- barcode.");
+
+                    // Check if first order contains SKU 011299 (Shipvillan crosstag item)
+                    if (toteData.Orders != null && toteData.Orders.Length > 0)
+                    {
+                        var firstOrder = toteData.Orders[0];
+                        var hasShipvillanSku = firstOrder.LineItems?.Edges?.Any(edge =>
+                            edge.Node?.Sku == "011299") ?? false;
+
+                        if (hasShipvillanSku)
+                        {
+                            var orderNumber = firstOrder.OrderNumber ?? "Unknown";
+                            Debug.WriteLine($"OrderAssignmentProcessor: Order contains Shipvillan SKU (011299), showing crosstag warning for order '{orderNumber}'");
+                            _toastManager.ShowCrosstagWarning(orderNumber);
+                        }
+                    }
                 }
                 finally
                 {
@@ -153,6 +174,9 @@ public class OrderAssignmentProcessor : IDisposable
                 // Clear the pending tote data before starting async operation
                 _pendingToteBarcode = null;
                 _pendingToteData = null;
+
+                // Clear the crosstag warning notification (if any)
+                _toastManager.ClearCrosstagWarning();
 
                 Debug.WriteLine($"OrderAssignmentProcessor: Received CT- barcode '{crossTagCode}' after tote '{toteBarcode}', triggering assignment");
 
@@ -242,7 +266,7 @@ public class OrderAssignmentProcessor : IDisposable
     }
 
     /// <summary>
-    /// Clears any pending tote barcode.
+    /// Clears any pending tote barcode and notification.
     /// </summary>
     public async Task ClearPendingStateAsync()
     {
@@ -251,6 +275,7 @@ public class OrderAssignmentProcessor : IDisposable
         {
             _pendingToteBarcode = null;
             _pendingToteData = null;
+            _toastManager.ClearCrosstagWarning();
             Debug.WriteLine("OrderAssignmentProcessor: Cleared pending state");
         }
         finally

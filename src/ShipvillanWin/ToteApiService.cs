@@ -70,10 +70,34 @@ public class ToteApiService : IDisposable
 
                     if (toteData.Orders != null && toteData.Orders.Length > 0)
                     {
-                        Debug.WriteLine($"[ToteApiService]   - First Order ID: {toteData.Orders[0].Id}");
-                        Debug.WriteLine($"[ToteApiService]   - First Order Number: {toteData.Orders[0].OrderNumber}");
-                        Debug.WriteLine($"[ToteApiService]   - First Order Partner ID: {toteData.Orders[0].PartnerOrderId}");
-                        Debug.WriteLine($"[ToteApiService]   - First Order Account ID: {toteData.Orders[0].AccountId}");
+                        var firstOrder = toteData.Orders[0];
+                        Debug.WriteLine($"[ToteApiService]   - First Order ID: {firstOrder.Id}");
+                        Debug.WriteLine($"[ToteApiService]   - First Order Number: {firstOrder.OrderNumber}");
+                        Debug.WriteLine($"[ToteApiService]   - First Order Partner ID: {firstOrder.PartnerOrderId}");
+                        Debug.WriteLine($"[ToteApiService]   - First Order Account ID: {firstOrder.AccountId}");
+
+                        if (firstOrder.LineItems?.Edges != null && firstOrder.LineItems.Edges.Length > 0)
+                        {
+                            Debug.WriteLine($"[ToteApiService]   - Line Items Count: {firstOrder.LineItems.Edges.Length}");
+                            for (int i = 0; i < firstOrder.LineItems.Edges.Length; i++)
+                            {
+                                var lineItem = firstOrder.LineItems.Edges[i].Node;
+                                if (lineItem != null)
+                                {
+                                    Debug.WriteLine($"[ToteApiService]   - Line Item {i + 1}:");
+                                    Debug.WriteLine($"[ToteApiService]     * SKU: {lineItem.Sku}");
+                                    Debug.WriteLine($"[ToteApiService]     * Product: {lineItem.ProductName}");
+                                    Debug.WriteLine($"[ToteApiService]     * Quantity: {lineItem.Quantity}");
+                                    Debug.WriteLine($"[ToteApiService]     * Price: {lineItem.Price}");
+                                    Debug.WriteLine($"[ToteApiService]     * Custom Barcode: {lineItem.CustomBarcode}");
+                                    Debug.WriteLine($"[ToteApiService]     * Warehouse: {lineItem.Warehouse}");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            Debug.WriteLine($"[ToteApiService]   - No line items in order");
+                        }
                     }
 
                     Debug.WriteLine($"[ToteApiService] ========================================");
@@ -201,4 +225,67 @@ public class OrderData
 
     [JsonPropertyName("fulfillment_status")]
     public string? FulfillmentStatus { get; set; }
+
+    [JsonPropertyName("line_items")]
+    public LineItemConnection? LineItems { get; set; }
+}
+
+/// <summary>
+/// Represents GraphQL connection for line items (pagination pattern).
+/// </summary>
+public class LineItemConnection
+{
+    [JsonPropertyName("edges")]
+    public LineItemEdge[]? Edges { get; set; }
+}
+
+/// <summary>
+/// Represents an edge in the line items connection.
+/// </summary>
+public class LineItemEdge
+{
+    [JsonPropertyName("node")]
+    public LineItemData? Node { get; set; }
+}
+
+/// <summary>
+/// Represents line item data in an order.
+/// </summary>
+public class LineItemData
+{
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
+    [JsonPropertyName("legacy_id")]
+    public int? LegacyId { get; set; }
+
+    [JsonPropertyName("sku")]
+    public string? Sku { get; set; }
+
+    [JsonPropertyName("partner_line_item_id")]
+    public string? PartnerLineItemId { get; set; }
+
+    [JsonPropertyName("quantity")]
+    public int? Quantity { get; set; }
+
+    [JsonPropertyName("quantity_allocated")]
+    public int? QuantityAllocated { get; set; }
+
+    [JsonPropertyName("quantity_pending_fulfillment")]
+    public int? QuantityPendingFulfillment { get; set; }
+
+    [JsonPropertyName("price")]
+    public string? Price { get; set; }
+
+    [JsonPropertyName("product_name")]
+    public string? ProductName { get; set; }
+
+    [JsonPropertyName("fulfillment_status")]
+    public string? FulfillmentStatus { get; set; }
+
+    [JsonPropertyName("custom_barcode")]
+    public string? CustomBarcode { get; set; }
+
+    [JsonPropertyName("warehouse")]
+    public string? Warehouse { get; set; }
 }
