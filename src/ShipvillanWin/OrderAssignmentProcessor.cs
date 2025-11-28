@@ -111,34 +111,42 @@ public class OrderAssignmentProcessor : IDisposable
 
             if (toteData != null)
             {
-                await _stateLock.WaitAsync();
-                try
+                var orderCount = toteData.Orders?.Length ?? 0;
+
+                // Check if first order contains SKU 011299 (Shipvillan crosstag item)
+                bool hasShipvillanSku = false;
+                string? orderNumber = null;
+
+                if (toteData.Orders != null && toteData.Orders.Length > 0)
                 {
-                    // Store the tote barcode and data (replaces any previous tote)
-                    _pendingToteBarcode = barcode;
-                    _pendingToteData = toteData;
+                    var firstOrder = toteData.Orders[0];
+                    hasShipvillanSku = firstOrder.LineItems?.Edges?.Any(edge =>
+                        edge.Node?.Sku == "011299") ?? false;
+                    orderNumber = firstOrder.OrderNumber;
+                }
 
-                    var orderCount = toteData.Orders?.Length ?? 0;
-                    Debug.WriteLine($"OrderAssignmentProcessor: Confirmed tote '{barcode}' (Name: {toteData.Name}, Orders: {orderCount}). Waiting for CT- barcode.");
-
-                    // Check if first order contains SKU 011299 (Shipvillan crosstag item)
-                    if (toteData.Orders != null && toteData.Orders.Length > 0)
+                // Only store tote if it contains SKU 011299 (requires cross-tag assignment)
+                if (hasShipvillanSku)
+                {
+                    await _stateLock.WaitAsync();
+                    try
                     {
-                        var firstOrder = toteData.Orders[0];
-                        var hasShipvillanSku = firstOrder.LineItems?.Edges?.Any(edge =>
-                            edge.Node?.Sku == "011299") ?? false;
+                        // Store the tote barcode and data (replaces any previous tote)
+                        _pendingToteBarcode = barcode;
+                        _pendingToteData = toteData;
 
-                        if (hasShipvillanSku)
-                        {
-                            var orderNumber = firstOrder.OrderNumber ?? "Unknown";
-                            Debug.WriteLine($"OrderAssignmentProcessor: Order contains Shipvillan SKU (011299), showing crosstag warning for order '{orderNumber}'");
-                            _toastManager.ShowCrosstagWarning(orderNumber);
-                        }
+                        Debug.WriteLine($"OrderAssignmentProcessor: Confirmed tote '{barcode}' with SKU 011299 (Name: {toteData.Name}, Orders: {orderCount}). Waiting for CT- barcode.");
+                        _toastManager.ShowCrosstagWarning(orderNumber ?? "Unknown");
+                    }
+                    finally
+                    {
+                        _stateLock.Release();
                     }
                 }
-                finally
+                else
                 {
-                    _stateLock.Release();
+                    // Tote confirmed but doesn't contain SKU 011299 - skip cross-tag assignment
+                    Debug.WriteLine($"OrderAssignmentProcessor: Tote '{barcode}' confirmed but does not contain SKU 011299 - skipping cross-tag assignment (Name: {toteData.Name}, Orders: {orderCount})");
                 }
             }
             else
@@ -185,8 +193,9 @@ public class OrderAssignmentProcessor : IDisposable
             }
             else if (barcode.StartsWith("CT-", StringComparison.OrdinalIgnoreCase))
             {
-                // CT- barcode without pending tote
-                Debug.WriteLine($"OrderAssignmentProcessor: Received CT- barcode '{barcode}' but no pending tote (ignoring)");
+                // CT- barcode without pending tote - show error toast
+                Debug.WriteLine($"OrderAssignmentProcessor: Received CT- barcode '{barcode}' but no pending tote (showing error toast)");
+                _toastManager.ShowCrosstagWithoutToteError(barcode);
             }
             else
             {
