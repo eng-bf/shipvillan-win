@@ -285,6 +285,30 @@ public class ToastNotificationManager : IDisposable
         }
     }
 
+    /// <summary>
+    /// Shows an error notification when CT- barcode is scanned without a pending tote.
+    /// This is a brief error notification that auto-dismisses.
+    /// </summary>
+    public void ShowCrosstagWithoutToteError(string crosstagCode)
+    {
+        try
+        {
+            var toastContent = new ToastContentBuilder()
+                .AddText("Cross-Tag Error", hintStyle: AdaptiveTextStyle.Title)
+                .AddText($"CT- barcode scanned without tote: {crosstagCode}", hintStyle: AdaptiveTextStyle.Subtitle)
+                .AddText("Scan a tote with SKU 011299 first")
+                .SetToastScenario(ToastScenario.Default); // Auto-dismisses after a few seconds
+
+            toastContent.Show();
+
+            Debug.WriteLine($"Toast notification shown: Cross-tag without tote error for {crosstagCode}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to show cross-tag without tote error notification: {ex.Message}");
+        }
+    }
+
     public void Dispose()
     {
         // Cleanup if needed
